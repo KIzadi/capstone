@@ -3,6 +3,8 @@ title: "My awesome blog"
 subtitle: "Spring 2023"
 author: "Prof. Yuster"
 bibliography: references.bib
+nocite: |
+  @*
 number-sections: false
 format:
   html:
@@ -11,7 +13,6 @@ format:
     code-fold: true
     code-tools: true
     toc: true
-  pdf: default
 jupyter: python3
 ---
 
@@ -66,4 +67,4 @@ plt.show()
 Here's an example of citing a source [see @phil99, pp. 33-35]. Be sure the source information is entered in "BibTeX" form in the `references.bib` file.
 
 
-The bibliography will automatically get generated. Any sources you cite in the document will be included. Other entries in the `.bib` file will not be included.
+The bibliography will automatically be generated, listing all sources in the `.bib` file.

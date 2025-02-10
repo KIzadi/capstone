@@ -1,6 +1,6 @@
 ---
 title: "My awesome blog"
-subtitle: "Spring 2023"
+subtitle: "Spring 2025"
 author: "Prof. Yuster"
 bibliography: references.bib
 nocite: |

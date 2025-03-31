@@ -2,62 +2,251 @@ import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score
+import datetime
+from sklearn.model_selection import TimeSeriesSplit
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.preprocessing import StandardScaler
+from matplotlib.dates import DateFormatter
+import seaborn as sns
 
-unseen_start_date = "2024-09-01"
-unseen_end_date = "2025-01-01"
-train_start_date = "2018-01-01"
-train_end_date = "2024-08-31"
-df_train = yf.download("SPY", start=train_start_date, end=train_end_date)
+np.random.seed(42)
 
-df_train["Daily Return"] = df_train["Close"].pct_change()
+def create_features(df):
+    df["Daily Return"] = df["Close"].pct_change()
+    df["Realized Volatility"] = df["Daily Return"].rolling(window=30).std() * np.sqrt(252)
+    
+    for lag in [1, 5, 10, 21]:
+        df[f"RV_Lag_{lag}"] = df["Realized Volatility"].shift(lag)
+    
+    df["High_Low_Range"] = (df["High"] / df["Low"] - 1).rolling(window=10).mean()
+    df["Volume_Change"] = df["Volume"].pct_change().rolling(window=10).mean()
+    df["MA_20"] = df["Close"].rolling(window=20).mean()
+    df["MA_50"] = df["Close"].rolling(window=50).mean()
+    df["MA_Ratio"] = df["MA_20"] / df["MA_50"]
+    
+    df["RSI"] = df["Daily Return"].apply(lambda x: max(x, 0)).rolling(window=14).mean() / \
+                df["Daily Return"].abs().rolling(window=14).mean()
+    
+    return df
 
-df_train["Realized Volatility"] = df_train["Daily Return"].rolling(window=30).std()
+print("Downloading historical SPY data (2010-2023)...")
+start_date = "2010-01-01"
+end_date = "2023-12-31"
 
-for lag in [1, 5, 10]:
-    df_train[f"RV_Lag_{lag}"] = df_train["Realized Volatility"].shift(lag)
+df = yf.download("SPY", start=start_date, end=end_date)
+print(f"Downloaded {len(df)} days of data")
 
-vix_train = yf.download("^VIX", start=train_start_date, end=train_end_date)
-df_train["VIX"] = vix_train["Close"]
+print("Downloading VIX data...")
+vix = yf.download("^VIX", start=start_date, end=end_date)
+df["VIX"] = vix["Close"]
+df["VIX_Change"] = vix["Close"].pct_change().rolling(window=5).mean()
 
-df_train.dropna(inplace=True)
+print("Creating features...")
+df = create_features(df)
+df.dropna(inplace=True)
 
-features_train = ["Realized Volatility", "VIX"] + [col for col in df_train.columns if "RV_Lag" in col]
-X_train = df_train[features_train]
-y_train = df_train["Realized Volatility"]
+feature_columns = ["VIX", "VIX_Change", "High_Low_Range", "Volume_Change", 
+                   "MA_Ratio", "RSI"] + [col for col in df.columns if "RV_Lag" in col]
+target_column = "Realized Volatility"
 
-model = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
-model.fit(X_train, y_train)
-df_unseen = yf.download("SPY", start=unseen_start_date, end=unseen_end_date)
+print("Setting up walk-forward validation...")
+n_splits = 5
+tscv = TimeSeriesSplit(n_splits=n_splits, test_size=63)  # ~3 months of trading days
 
-# Compute daily returns
-df_unseen["Daily Return"] = df_unseen["Close"].pct_change()
-df_unseen["Realized Volatility"] = df_unseen["Daily Return"].rolling(window=30).std()
+cv_results = {
+    'train_start': [],
+    'train_end': [],
+    'test_start': [],
+    'test_end': [],
+    'train_size': [],
+    'test_size': [],
+    'rf_mse': [],
+    'rf_rmse': [],
+    'rf_mae': [],
+    'rf_r2': [],
+    'gb_mse': [],
+    'gb_rmse': [],
+    'gb_mae': [],
+    'gb_r2': []
+}
 
-for lag in [1, 5, 10]:
-    df_unseen[f"RV_Lag_{lag}"] = df_unseen["Realized Volatility"].shift(lag)
+X = df[feature_columns]
+y = df[target_column]
 
-vix_unseen = yf.download("^VIX", start=unseen_start_date, end=unseen_end_date)
-df_unseen["VIX"] = vix_unseen["Close"]
+fold = 1
+fig, axes = plt.subplots(n_splits, 1, figsize=(15, 5*n_splits))
 
-df_unseen.dropna(inplace=True)
-features_unseen = ["Realized Volatility", "VIX"] + [col for col in df_unseen.columns if "RV_Lag" in col]
-X_unseen = df_unseen[features_unseen]
-y_unseen_pred = model.predict(X_unseen)
+for train_idx, test_idx in tscv.split(X):
+    print(f"\nFold {fold}/{n_splits}")
+    
+    X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
+    y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
+    
+    # Record fold details
+    cv_results['train_start'].append(df.index[train_idx[0]].strftime('%Y-%m-%d'))
+    cv_results['train_end'].append(df.index[train_idx[-1]].strftime('%Y-%m-%d'))
+    cv_results['test_start'].append(df.index[test_idx[0]].strftime('%Y-%m-%d'))
+    cv_results['test_end'].append(df.index[test_idx[-1]].strftime('%Y-%m-%d'))
+    cv_results['train_size'].append(len(train_idx))
+    cv_results['test_size'].append(len(test_idx))
+    
+    print(f"Training: {cv_results['train_start'][-1]} to {cv_results['train_end'][-1]} ({len(train_idx)} days)")
+    print(f"Testing:  {cv_results['test_start'][-1]} to {cv_results['test_end'][-1]} ({len(test_idx)} days)")
+    
+    # Scale features - important to fit only on training data to avoid leakage
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    # Random Forest Model
+    rf_model = RandomForestRegressor(
+        n_estimators=200,
+        max_depth=10,
+        min_samples_split=5,
+        min_samples_leaf=2,
+        random_state=42,
+        n_jobs=-1
+    )
+    
+    rf_model.fit(X_train_scaled, y_train)
+    rf_pred = rf_model.predict(X_test_scaled)
+    
+    # Gradient Boosting Model
+    gb_model = GradientBoostingRegressor(
+        n_estimators=200,
+        learning_rate=0.1,
+        max_depth=5,
+        random_state=42
+    )
+    
+    gb_model.fit(X_train_scaled, y_train)
+    gb_pred = gb_model.predict(X_test_scaled)
+    
+    # Evaluate models
+    rf_mse = mean_squared_error(y_test, rf_pred)
+    rf_rmse = np.sqrt(rf_mse)
+    rf_mae = mean_absolute_error(y_test, rf_pred)
+    rf_r2 = r2_score(y_test, rf_pred)
+    
+    gb_mse = mean_squared_error(y_test, gb_pred)
+    gb_rmse = np.sqrt(gb_mse)
+    gb_mae = mean_absolute_error(y_test, gb_pred)
+    gb_r2 = r2_score(y_test, gb_pred)
+    
+    # Store results
+    cv_results['rf_mse'].append(rf_mse)
+    cv_results['rf_rmse'].append(rf_rmse)
+    cv_results['rf_mae'].append(rf_mae)
+    cv_results['rf_r2'].append(rf_r2)
+    cv_results['gb_mse'].append(gb_mse)
+    cv_results['gb_rmse'].append(gb_rmse)
+    cv_results['gb_mae'].append(gb_mae)
+    cv_results['gb_r2'].append(gb_r2)
+    
+    print(f"Random Forest - RMSE: {rf_rmse:.6f}, R²: {rf_r2:.6f}")
+    print(f"Gradient Boosting - RMSE: {gb_rmse:.6f}, R²: {gb_r2:.6f}")
+    
+    # Plot actual vs predicted for both models
+    ax = axes[fold-1]
+    test_dates = df.index[test_idx]
+    
+    ax.plot(test_dates, y_test, label='Actual', color='blue')
+    ax.plot(test_dates, rf_pred, label='RandomForest', color='red', linestyle='--')
+    ax.plot(test_dates, gb_pred, label='GradientBoosting', color='green', linestyle=':')
+    
+    ax.set_title(f'Fold {fold}: {cv_results["test_start"][-1]} to {cv_results["test_end"][-1]}')
+    ax.legend()
+    ax.grid(True)
+    ax.xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+    
+    fold += 1
 
-mse_unseen = mean_squared_error(df_unseen["Realized Volatility"], y_unseen_pred)
-r2_unseen = r2_score(df_unseen["Realized Volatility"], y_unseen_pred)
-
-print(f"Mean Squared Error (MSE) - Unseen Data: {mse_unseen:.6f}")
-print(f"R-Squared (R2) - Unseen Data: {r2_unseen:.6f}")
-
-results_unseen = pd.DataFrame({"Actual": df_unseen["Realized Volatility"], "Predicted": y_unseen_pred}, index=df_unseen.index)
-print(results_unseen.head())
-plt.figure(figsize=(12, 6))
-plt.plot(df_unseen.index, df_unseen["Realized Volatility"], label="Actual Volatility", color="blue")
-plt.plot(df_unseen.index, y_unseen_pred, label="Predicted Volatility", color="red", linestyle="dashed")
-plt.title("Actual vs Predicted Volatility (SPY) with unseen data")
-plt.legend()
+plt.tight_layout()
+plt.savefig('volatility_walk_forward_validation.png', dpi=300)
 plt.show()
+
+# Create summary DataFrame of cross-validation results
+cv_summary = pd.DataFrame(cv_results)
+print("\nCross-validation Summary:")
+print(cv_summary[['train_start', 'train_end', 'test_start', 'test_end', 
+                 'rf_rmse', 'rf_r2', 'gb_rmse', 'gb_r2']])
+
+# Calculate average performance across folds
+print("\nAverage Performance Metrics:")
+print(f"Random Forest - RMSE: {np.mean(cv_results['rf_rmse']):.6f} ± {np.std(cv_results['rf_rmse']):.6f}")
+print(f"Random Forest - R²: {np.mean(cv_results['rf_r2']):.6f} ± {np.std(cv_results['rf_r2']):.6f}")
+print(f"Gradient Boosting - RMSE: {np.mean(cv_results['gb_rmse']):.6f} ± {np.std(cv_results['gb_rmse']):.6f}")
+print(f"Gradient Boosting - R²: {np.mean(cv_results['gb_r2']):.6f} ± {np.std(cv_results['gb_r2']):.6f}")
+
+# Feature importance analysis (using the last fold's Random Forest model)
+feature_importance = pd.DataFrame({
+    'Feature': feature_columns,
+    'Importance': rf_model.feature_importances_
+}).sort_values('Importance', ascending=False)
+
+plt.figure(figsize=(12, 8))
+sns.barplot(x='Importance', y='Feature', data=feature_importance)
+plt.title('Feature Importance (Random Forest)')
+plt.tight_layout()
+plt.savefig('feature_importance.png', dpi=300)
+plt.show()
+
+# Final model trained on all data for future predictions
+print("\nTraining final model on all historical data...")
+
+scaler_final = StandardScaler()
+X_scaled_final = scaler_final.fit_transform(X)
+
+final_rf_model = RandomForestRegressor(
+    n_estimators=200,
+    max_depth=10,
+    min_samples_split=5,
+    min_samples_leaf=2,
+    random_state=42,
+    n_jobs=-1
+)
+
+final_rf_model.fit(X_scaled_final, y)
+
+# Out-of-sample forecast for 2024 Q1 (if available)
+try:
+    print("\nForecasting volatility for 2024 Q1...")
+    forecast_start = "2024-01-01"
+    forecast_end = "2024-03-31"
+    
+    forecast_data = yf.download("SPY", start=forecast_start, end=forecast_end)
+    forecast_vix = yf.download("^VIX", start=forecast_start, end=forecast_end)
+    
+    forecast_data["VIX"] = forecast_vix["Close"]
+    forecast_data["VIX_Change"] = forecast_vix["Close"].pct_change().rolling(window=5).mean()
+    
+    forecast_data = create_features(forecast_data)
+    forecast_data.dropna(inplace=True)
+    
+    X_forecast = forecast_data[feature_columns]
+    y_forecast = forecast_data[target_column]
+    
+    X_forecast_scaled = scaler_final.transform(X_forecast)
+    y_forecast_pred = final_rf_model.predict(X_forecast_scaled)
+    
+    forecast_mse = mean_squared_error(y_forecast, y_forecast_pred)
+    forecast_rmse = np.sqrt(forecast_mse)
+    forecast_r2 = r2_score(y_forecast, y_forecast_pred)
+    
+    print(f"2024 Q1 Out-of-Sample Performance - RMSE: {forecast_rmse:.6f}, R²: {forecast_r2:.6f}")
+    
+    plt.figure(figsize=(15, 6))
+    plt.plot(forecast_data.index, y_forecast, label='Actual', color='blue')
+    plt.plot(forecast_data.index, y_forecast_pred, label='RandomForest', color='red', linestyle='--')
+    plt.title('Out-of-Sample Forecast: 2024 Q1')
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig('volatility_forecast_2024Q1.png', dpi=300)
+    plt.show()
+    
+except Exception as e:
+    print(f"Could not perform 2024 Q1 forecast: {e}")
+
+print("\nAnalysis complete.")

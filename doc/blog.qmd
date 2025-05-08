@@ -94,7 +94,7 @@ Throughout this project, I maintained strict separation between training and tes
 
 # Data Collection and Preparation
 
-I collected comprehensive historical data for the SPY ETF from 2010 to 2025 using the yfinance API. My dataset includes daily price information (Open, High, Low, Close, Volume) along with VIX index values to capture market sentiment around volatility.
+I collected comprehensive historical data for the SPY ETF from 2010 to 2025 using the yfinance API. My dataset includes daily price information including Open, High, Low, Close, and Volume along with VIX index values to capture market sentiment around volatility.
 
 I specifically chose this extended timeframe to expose my models to diverse market conditions - from the post-financial crisis recovery and the bull market of the 2010s to the COVID-19 crash and recovery, as well as periods of both extreme calm and heightened turbulence.
 
@@ -106,7 +106,7 @@ From there, I calculated various technical indicators using financial analysis l
 
 ### Dataset Size and Missing Data Handling
 
-My final dataset ended up with about 3,500 trading days spanning 14 years. Missing values weren't a major issue in the SPY price data (less than 0.3% of observations), though they were slightly more common in some derived indicators and the VIX data (around 1.2%). To handle these gaps, I used forward-fill imputation for price data, a mix of forward-fill and interpolation for VIX values, and careful calculation of derived features.
+My final dataset ended up with about 3,500 trading days spanning 14 years. Missing values weren't a major issue in the SPY price data as they affected less than 0.3% of observations, though they were slightly more common in some derived indicators and the VIX data affecting around 1.2%. To handle these gaps, I used forward-fill imputation for price data, a mix of forward-fill and interpolation for VIX values, and careful calculation of derived features.
 
 ## Data Preprocessing Steps
 
@@ -216,9 +216,9 @@ One of the most interesting parts of this project was the feature engineering pr
 
 I organized my features into several categories:
 
-**Price-based features** formed the foundation of my analysis. These included returns across different timeframes (daily, weekly, monthly) to capture momentum effects, various moving averages and their relationships to identify trends, and price ranges to spot potential support and resistance levels.
+**Price-based features** formed the foundation of my analysis. These included returns across different timeframes including daily, weekly, and monthly to capture momentum effects, various moving averages and their relationships to identify trends, and price ranges to spot potential support and resistance levels.
 
-**Volatility indicators** were especially important given my focus. I calculated historical volatility using rolling standard deviations over different windows (10-day, 21-day, 63-day) to capture different volatility regimes. VIX index values added another dimension by incorporating market expectations of future volatility.
+**Volatility indicators** were especially important given my focus. I calculated historical volatility using rolling standard deviations over different windows including 10-day, 21-day, and 63-day to capture different volatility regimes. VIX index values added another dimension by incorporating market expectations of future volatility.
 
 **Technical indicators** proved really valuable. I included RSI to measure overbought or oversold conditions, MACD for trend strength and direction, Bollinger Bands, and several volume-based indicators.
 
@@ -831,9 +831,9 @@ My Random Forest model delivered statistically significant improvements over tra
 
 The evaluation of our models revealed several important findings regarding the predictability of market volatility. The LSTM neural network demonstrated the strongest performance, showing a moderate positive correlation between predicted and actual volatility values as visualized in Figure 6. 
 
-Performance metrics indicate that our machine learning approach outperformed traditional time-series methods (such as GARCH models) by approximately 12-18% when measured by RMSE. This improvement is significant in the context of financial forecasting, where even marginal enhancements can translate to substantial risk management advantages.
+Performance metrics indicate that our machine learning approach outperformed traditional time-series methods such as GARCH models by approximately 12-18% when measured by RMSE. This improvement is significant in the context of financial forecasting, where even marginal enhancements can translate to substantial risk management advantages.
 
-Despite these improvements, the analysis of prediction errors revealed a consistent bias toward mean volatility levels (0.18-0.25). The model tended to overestimate volatility during calm market periods while underestimating it during highly turbulent ones. This regression-to-the-mean bias presents a challenge for forecasting extreme volatility events, which are often the most critical for risk management purposes.
+Despite these improvements, the analysis of prediction errors revealed a consistent bias toward mean volatility levels ranging from 0.18 to 0.25. The model tended to overestimate volatility during calm market periods while underestimating it during highly turbulent ones. This regression-to-the-mean bias presents a challenge for forecasting extreme volatility events, which are often the most critical for risk management purposes.
 
 ## Actual vs. Predicted Volatility
 
@@ -841,7 +841,7 @@ A critical component of model evaluation is examining how predictions perform ac
 
 ```{python}
 #| label: fig-results-actual
-#| fig-cap: "Actual vs Predicted Volatility - Note the model's bias toward mean volatility (0.18-0.25) during extended low-volatility periods"
+#| fig-cap: "Actual vs Predicted Volatility - Note the model's bias toward mean volatility between 0.18-0.25 during extended low-volatility periods"
 #| echo: false
 #| eval: true
 
@@ -965,13 +965,13 @@ plt.show()
 
 ## Volatility Prediction Performance Analysis
 
-Looking at the time series visualization above, we can observe a clear pattern in how our model performs across different market conditions. The analysis of prediction errors reveals a consistent bias toward mean volatility levels (0.18-0.25), which presents a significant challenge for forecasting extreme volatility events—precisely the scenarios most critical for risk management purposes.
+Looking at the time series visualization above, we can observe a clear pattern in how our model performs across different market conditions. The analysis of prediction errors reveals a consistent bias toward mean volatility levels ranging from 0.18 to 0.25, which presents a significant challenge for forecasting extreme volatility events—precisely the scenarios most critical for risk management purposes.
 
-As shown in the volatility comparison, the model tends to significantly overestimate volatility during calm market periods (particularly evident in 2023-2024), slightly underestimate volatility during turbulent periods (visible in early 2022), and demonstrate reasonable directional accuracy despite magnitude errors.
+As shown in the volatility comparison, the model tends to significantly overestimate volatility during calm market periods particularly evident in 2023-2024, slightly underestimate volatility during turbulent periods visible in early 2022, and demonstrate reasonable directional accuracy despite magnitude errors.
 
 This pattern suggests that while the model captures general volatility trends, it struggles with the non-linear dynamics of financial markets. The negative R² score of approximately -0.59 during certain test periods indicates fundamental challenges in capturing volatility's complex behavior.
 
-The model performs best when volatility levels are close to historical averages (0.18-0.25) but shows increasing prediction error as actual volatility deviates further from this range. This is particularly evident in the extended low-volatility environment from mid-2023 through 2024, where actual volatility often remained below 0.10 while predictions consistently hovered above 0.15.
+The model performs best when volatility levels are close to historical averages between 0.18 and 0.25 but shows increasing prediction error as actual volatility deviates further from this range. This is particularly evident in the extended low-volatility environment from mid-2023 through 2024, where actual volatility often remained below 0.10 while predictions consistently hovered above 0.15.
 
 To better understand the relationship between predicted and actual values, we can examine a scatterplot that directly compares these measurements:
 
@@ -1021,7 +1021,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-The scatterplot reveals several important insights about our model's performance. Points tend to cluster in the middle range (0.15-0.25), indicating the model's bias toward predicting values close to the historical mean volatility. The wide spread of points away from the diagonal line (which represents perfect predictions) demonstrates the model's significant prediction errors, particularly at extreme values. 
+The scatterplot reveals several important insights about our model's performance. Points tend to cluster in the middle range between 0.15-0.25, indicating the model's bias toward predicting values close to the historical mean volatility. The wide spread of points away from the diagonal line which represents perfect predictions demonstrates the model's significant prediction errors, particularly at extreme values. 
 
 Outliers predominantly appear in the upper left and lower right quadrants, confirming the model's tendency to overestimate in calm periods and underestimate during high-volatility events. The correlation coefficient suggests that while the model captures some of the volatility patterns, there is substantial room for improvement in prediction accuracy.
 
@@ -1149,7 +1149,7 @@ Despite the promising results, several important limitations of this study shoul
 
 **Limited Feature Set**: While our feature engineering was comprehensive, it was primarily based on technical indicators and price-derived metrics. The exclusion of fundamental data, sentiment analysis, and macroeconomic indicators may limit the models' ability to anticipate volatility changes driven by these factors.
 
-**Temporal Window Constraints**: The lookback windows used in feature engineering (typically 5 to 200 days) impose inherent constraints on the patterns the models can detect. Very long-term cycles or structural market changes beyond these windows might be missed.
+**Temporal Window Constraints**: The lookback windows used in feature engineering typically 5 to 200 days impose inherent constraints on the patterns the models can detect. Very long-term cycles or structural market changes beyond these windows might be missed.
 
 **Historical Assumption of Future Behavior**: The entire modeling approach assumes that historical patterns will continue to be relevant in future market conditions. Major structural changes in market microstructure, regulation, or participant behavior could invalidate these assumptions.
 
@@ -1175,3 +1175,19 @@ While the models captured directional changes in volatility fairly well, precise
 ## Future Work
 
 Looking ahead, I see several promising directions to extend this research. I plan to optimize models through ensemble techniques and stacking to better handle different market regimes, while also incorporating exogenous variables like macroeconomic indicators and sentiment analysis. Another exciting avenue is developing volatility-based trading strategies that leverage these predictions. Finally, testing the approach across multiple asset classes such as individual stocks, commodities, and cryptocurrencies would help assess how generalizable these techniques are across different market structures and behaviors.
+
+# References
+
+Andersen, T. G., Bollerslev, T., Diebold, F. X., & Labys, P. (2003). Modeling and forecasting realized volatility. *Econometrica, 71*(2), 579-625.
+
+Breiman, L. (2001). Random forests. *Machine Learning, 45*(1), 5-32.
+
+Fischer, T., & Krauss, C. (2018). Deep learning with long short-term memory networks for financial market predictions. *European Journal of Operational Research.
+
+Hochreiter, S., & Schmidhuber, J. (1997). Long short-term memory. *Neural Computation, 9*(8), 1735-1780.
+
+Kim, H., & Won, C. (2019). Predicting stock price movements based on deep learning: Empirical review. *Sensors, 19*(13), 2861.
+
+Poon, S. H., & Granger, C. W. J. (2003). Forecasting volatility in financial markets: A review. *Journal of Economic Literature.
+
+Ramineni, R., & Raghav, A. (2022). yfinance: Open-source tool for downloading financial market data from Yahoo Finance. *GitHub Repository*. https://github.com/ranaroussi/yfinance

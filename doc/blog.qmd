@@ -94,39 +94,28 @@ Throughout this project, I maintained strict separation between training and tes
 
 # Data Collection and Preparation
 
-This project utilizes comprehensive historical data for the SPY ETF spanning from 2010 to 2023, collected via the yfinance API. The dataset encompasses daily price information (Open, High, Low, Close, Volume) along with VIX index data to capture market volatility sentiment.
+I collected comprehensive historical data for the SPY ETF from 2010 to 2025 using the yfinance API. My dataset includes daily price information (Open, High, Low, Close, Volume) along with VIX index values to capture market sentiment around volatility.
 
-The extended historical timeframe was chosen deliberately to expose the models to diverse market conditions. The dataset includes the post-financial crisis recovery, the bull market of the 2010s, the COVID-19 crash and subsequent recovery, and various periods of both extreme calm and heightened turbulence. This diversity helps ensure that any patterns identified by the models are robust across different market environments.
+I specifically chose this extended timeframe to expose my models to diverse market conditions - from the post-financial crisis recovery and the bull market of the 2010s to the COVID-19 crash and recovery, as well as periods of both extreme calm and heightened turbulence.
 
 ## Data Collection Process
 
-The data collection process involved several components. First, I retrieved historical SPY data using the yfinance API, ensuring coverage from 2010 through the end of 2023. This provided the core price and volume metrics needed for analysis. The data was supplemented with VIX index values, which serve as a widely recognized measure of expected market volatility.
+The collection process was straightforward but thorough. I pulled historical SPY data through yfinance, making sure I had complete coverage from 2010 through 2025. This gave me the core price and volume metrics I needed. I then supplemented this with VIX index values, which offer a great measure of expected market volatility.
 
-Technical indicators were calculated using established financial analysis libraries. These included various moving averages that help identify trends, momentum indicators like RSI and MACD that capture overbought or oversold conditions, and volume metrics that provide insights into the conviction behind price movements.
-
-The VIX index provides particularly valuable information as it represents the market's expectation of 30-day forward-looking volatility. By combining actual historical price movements with this forward-looking sentiment measure, the models gain a more comprehensive view of market dynamics.
+From there, I calculated various technical indicators using financial analysis libraries - things like moving averages, momentum indicators like RSI and MACD, and several volume metrics.
 
 ### Dataset Size and Missing Data Handling
 
-The final dataset contained approximately 3,500 trading days spanning 14 years (2010-2023). This timeframe was chosen to capture multiple market cycles and volatility regimes, providing sufficient data for both training and out-of-sample testing. Market holidays, weekends, and other non-trading days were naturally excluded from the dataset as they weren't present in the yfinance API data.
-
-Missing values were relatively rare in the SPY price data (less than 0.3% of observations), but more common in some derived indicators and the VIX data (approximately 1.2% of observations). These gaps typically occurred around market holidays or due to rare data reporting issues. To maintain data integrity, I implemented the following approach:
-
-1. For missing price data: Forward-fill imputation was used to carry the last available price forward, which is consistent with how markets behave when closed.
-2. For missing VIX values: A combination of forward-fill for single missing days and linear interpolation for multi-day gaps was employed.
-3. For derived features: These were calculated only after the base data was cleaned to prevent propagating missing values.
-
-This careful handling ensured that the dataset remained continuous and temporally consistent, which is critical for time-series models.
+My final dataset ended up with about 3,500 trading days spanning 14 years. Missing values weren't a major issue in the SPY price data (less than 0.3% of observations), though they were slightly more common in some derived indicators and the VIX data (around 1.2%). To handle these gaps, I used forward-fill imputation for price data, a mix of forward-fill and interpolation for VIX values, and careful calculation of derived features.
 
 ## Data Preprocessing Steps
 
-Financial time series data requires careful preprocessing to maintain its temporal integrity and prevent information leakage. First, missing values were addressed through forward fill imputation, which replaces missing data points with the last available value. This approach is appropriate for financial markets where the last known price is typically the best estimate until new information arrives.
+Working with financial time series requires careful preprocessing to maintain integrity and prevent information leakage. I addressed this by:
 
-Feature scaling was implemented using MinMaxScaler to normalize all features to a common range, improving model training stability and convergence. Crucially, the scaling parameters were determined solely from training data and then applied to test data, preventing any information from the future from influencing the model's inputs.
-
-The train-test split was implemented chronologically rather than randomly, respecting the time-series nature of financial data. This approach ensures that models are only trained on past data and evaluated on future periods they haven't seen, mimicking real-world application scenarios.
-
-Special attention was paid to feature engineering to prevent data leakage. When calculating features like moving averages or volatility measures, only data points that would have been available at the time of prediction were used. This careful boundary maintenance is essential for developing models that can perform reliably in practice rather than merely appearing successful in backtests.
+- Using forward fill imputation for missing values
+- Scaling features with MinMaxScaler, making sure to determine parameters only from training data
+- Implementing a chronological train-test split rather than random sampling
+- Carefully constructing features to avoid any potential data leakage
 
 # Required Packages for Implementation
 
@@ -205,9 +194,9 @@ import yfinance as yf
 import pandas as pd
 import numpy as np
 
-# Download historical SPY data (2010-2023)
+# Download historical SPY data (2010-2025)
 start_date = "2010-01-01"
-end_date = "2023-12-31"
+end_date = "2025-12-31"
 
 # Download SPY data
 df = yf.download("SPY", start=start_date, end=end_date)
@@ -221,21 +210,21 @@ df["VIX"] = vix["Close"]
 
 # Feature Engineering
 
-Feature engineering is a critical component of this project, representing the intersection of financial domain knowledge and data science techniques. Rather than relying solely on raw price data, I developed a comprehensive set of features designed to help the models recognize and respond to various market conditions and patterns.
+One of the most interesting parts of this project was the feature engineering process. I wanted to create features that would help the models recognize patterns across different market conditions, so I drew on both financial domain knowledge and data science techniques.
 
 ## Types of Features Created
 
-The feature set was organized into several categories, each capturing different aspects of market behavior:
+I organized my features into several categories:
 
-Price-based features form the foundation of the analysis, including returns calculated across different timeframes (daily, weekly, monthly) to capture both immediate and longer-term momentum. Various moving averages and their relationships provide trend information, while price ranges and relative positions help identify potential support and resistance levels.
+**Price-based features** formed the foundation of my analysis. These included returns across different timeframes (daily, weekly, monthly) to capture momentum effects, various moving averages and their relationships to identify trends, and price ranges to spot potential support and resistance levels.
 
-Volatility indicators are particularly important given the project's focus. Historical volatility was calculated using rolling standard deviations of returns over different windows (10-day, 21-day, 63-day) to capture short, medium, and longer-term volatility regimes. The VIX index values provide an additional dimension by incorporating market expectations of future volatility.
+**Volatility indicators** were especially important given my focus. I calculated historical volatility using rolling standard deviations over different windows (10-day, 21-day, 63-day) to capture different volatility regimes. VIX index values added another dimension by incorporating market expectations of future volatility.
 
-Technical indicators add substantial value by encoding patterns that traders have found useful over decades. These include the Relative Strength Index (RSI) to measure overbought or oversold conditions, Moving Average Convergence Divergence (MACD) for trend strength and direction, Bollinger Bands to identify volatility-based support and resistance, and various volume-based indicators that help gauge the conviction behind price movements.
+**Technical indicators** proved really valuable. I included RSI to measure overbought or oversold conditions, MACD for trend strength and direction, Bollinger Bands, and several volume-based indicators.
 
-Lagged features play a crucial role in capturing time-series dependencies. By including lagged versions of key metrics like returns, volatility measures, and technical indicators, the models can identify temporal patterns and autocorrelations that are characteristic of financial markets. Volatility clustering—the tendency for volatile periods to persist—is particularly well captured through these lagged features.
+**Lagged features** helped capture time-series dependencies, revealing temporal patterns and autocorrelations that are characteristic of financial markets.
 
-Calendar features were included to account for potential seasonal effects in market behavior. These include day-of-week indicators, month-of-year variables, and quarter designations. While these features ultimately proved less impactful than market-derived indicators, they enable the models to capture any consistent seasonal patterns that might exist.
+I also included **calendar features** to check for seasonal effects in market behavior, though these turned out to be less impactful than the market-derived indicators.
 
 ## Market Visualization Techniques
 
@@ -408,14 +397,14 @@ plt.show()
 
 ### Multi-dimensional Market Analysis
 
-The market regime visualization above demonstrates how volatility clusters into distinct periods (high, medium, and low) and shows the relationship between price action, volume, and volatility. This visualization was critical to the project as it directly informed our feature engineering approach by revealing:
+The market visualization above revealed some fascinating patterns in how volatility clusters into distinct periods and relates to price action and volume. These insights directly shaped my feature engineering:
 
-1. **Volatility Clustering Patterns**: The tendency for volatility to persist in regimes, which we capture through lagged features and rolling volatility windows
-2. **Regime Transitions**: The identifiable shifts between volatility states, which we model using moving average crossovers and volatility breakouts
-3. **Volume-Volatility Relationships**: The correlation between trading volume and volatility, which we incorporate through volume-based features
-4. **Price-Volatility Dynamics**: How price behavior changes across different volatility environments, informing our decision to include regime-specific features
+1. **Volatility Clustering Patterns**: I observed how volatility tends to persist in regimes
+2. **Regime Transitions**: The visualization highlighted clear shifts between volatility states
+3. **Volume-Volatility Relationships**: I noticed strong correlations between trading volume and volatility
+4. **Price-Volatility Dynamics**: The charts showed how price behavior changes in different volatility environments
 
-These insights directly influenced our choice of technical indicators and the specific lookback periods used in our predictive models.
+These observations guided my selection of technical indicators and the specific lookback periods I used in the models.
 
 ## Feature Selection Process
 
@@ -616,65 +605,59 @@ df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['bb_middle']  # Normaliz
 
 # Model Implementation
 
-For this project, I implemented several machine learning models to predict volatility. The primary objective was to create a model that could accurately capture the complex, non-linear dynamics of market volatility while remaining interpretable enough for practical application.
+After creating my feature set, I experimented with several machine learning models to predict volatility. I wanted a model that could capture the non-linear dynamics of market volatility while still being interpretable enough for practical application.
 
 ## Choosing the Right Model
 
-When selecting a model architecture, I needed to balance complexity against interpretability, computational efficiency, and the risk of overfitting. Linear models provide simplicity and transparency but often struggle with the inherently non-linear nature of financial markets. Deep learning approaches can model complex relationships but require extensive data and are prone to overfitting.
+I had to balance several factors when selecting model architectures - complexity vs. interpretability, computational demands, and the risk of overfitting. Tree-based ensemble methods emerged as my preferred approach since they handle non-linear relationships well without requiring extensive preprocessing and can capture complex feature interactions.
 
-After careful consideration, I selected tree-based ensemble methods as my primary approach. These models effectively handle non-linear relationships without extensive feature preprocessing and can capture feature interactions automatically. They also provide useful feature importance metrics that align with domain knowledge.
+I tested four different model types:
 
-I tested several model architectures:
+- **Random Forest** became my primary model, offering that sweet spot between performance and interpretability
+- **XGBoost** leveraged gradient boosting to potentially improve prediction accuracy
+- **LSTM neural network** helped capture sequential patterns in the volatility time series
+- **Linear Regression** served as my baseline for comparison
 
-- Random Forest: This served as my primary model, offering a good balance between performance and interpretability
-- XGBoost: Implemented to leverage gradient boosting's ability to improve prediction accuracy
-- LSTM neural network: Used to capture sequential patterns in the volatility time series
-- Linear Regression: Implemented as a baseline for comparison
-
-The Random Forest consistently demonstrated the most stable performance across different market regimes and evaluation periods, so I focused on optimizing this architecture further.
+The Random Forest consistently performed best across different market regimes and time periods, so I focused on optimizing this model further.
 
 ### Model Implementation Details
 
-Each model was implemented with the following configurations:
+Each model underwent extensive tuning to find optimal configurations. The Random Forest used 200 trees with a maximum depth of 20, while the XGBoost model ran with 300 boosting rounds and a learning rate of 0.05. For the LSTM network, I implemented a bidirectional architecture with dropout layers to prevent overfitting.
 
-**Random Forest**:
-- 200 trees with a maximum depth of 20
-- Minimum samples split of 5 and minimum samples leaf of 2
-- Feature selection using mean decrease in impurity
-- Out-of-bag samples for error estimation 
-- Randomized feature selection at each split (max_features='sqrt')
+One challenge I encountered during implementation was balancing model complexity against training speed and risk of overfitting. This was especially true for the LSTM networks, which required careful architecture design. My final LSTM model used two bidirectional LSTM layers (64 and 32 units respectively) followed by dropout layers (0.3 rate) and dense layers for the final prediction. I found that this architecture struck the right balance between complexity and generalization ability.
 
-**XGBoost**:
-- 300 boosting rounds with a learning rate of 0.05
-- Maximum depth of 6 and minimum child weight of 2
-- Subsample ratio of 0.8 and column sample by tree of 0.8
-- L1 regularization (alpha) of 0.01 and L2 regularization (lambda) of 1.0
-- Early stopping based on validation set performance with a patience of 20 rounds
+## Hyperparameter Tuning Process
 
-**LSTM Neural Network**:
-- Architecture: Input layer → LSTM(64) → Dropout(0.2) → LSTM(32) → Dropout(0.2) → Dense(16) → Dense(1)
-- Bidirectional LSTM layers to capture both forward and backward temporal dependencies
-- Look-back window of 30 trading days to capture monthly patterns
-- Trained using Adam optimizer with a learning rate of 0.001
-- Mean squared error loss function with early stopping (patience=20)
-- Batch size of 32 and training for a maximum of 100 epochs
+The hyperparameter tuning process was particularly interesting for the tree-based models. I implemented a grid search with cross-validation to identify optimal settings, exploring several key parameters:
 
-**ARIMA** (benchmark):
-- Automatically determined parameters using AIC minimization
-- Typical configuration: ARIMA(2,1,2) based on data stationarity tests
-- Rolling window retraining every 63 trading days (quarterly)
+For Random Forest:
+- Number of trees (100-500)
+- Maximum depth (10-30)
+- Minimum samples per leaf (1-5)
+- Maximum features considered at each split (sqrt, log2, or proportion of total)
 
-Each model underwent hyperparameter tuning using a time-series cross-validation approach to prevent look-ahead bias. The final configurations represented the optimal balance between predictive accuracy and generalization ability.
+For XGBoost:
+- Learning rate (0.01-0.1)
+- Maximum depth (3-10)
+- Subsample ratio (0.7-1.0)
+- Column sample by tree (0.5-1.0)
+- L1 and L2 regularization terms
+
+The optimization process revealed some interesting insights. For example, I found that relatively deep trees (maximum depth around 20) performed better than shallower ones, suggesting the importance of capturing complex non-linear relationships in the data. However, going beyond 25 led to overfitting, particularly in low-volatility regimes.
+
+The most impactful parameter for the Random Forest was the number of trees, with performance continuing to improve up to around 200 trees before plateauing. This suggests that the diversity of perspectives provided by the ensemble was crucial for handling the noise inherent in financial data.
 
 ## Walk-Forward Validation
 
-Traditional cross-validation methods are problematic for time series data as they can introduce look-ahead bias. To address this challenge, I implemented a walk-forward validation approach that respects the temporal nature of financial data:
+Traditional cross-validation doesn't work well for time series data because it can introduce look-ahead bias. To address this problem, I implemented a walk-forward validation approach:
 
-1. I trained models on a 3-year rolling window of historical data
-2. Each model was evaluated on the subsequent 3 months of unseen data
-3. The window was shifted forward by 3 months, and the process repeated
+1. Training models on a 3-year rolling window of historical data
+2. Evaluating on the subsequent 3 months of unseen data
+3. Shifting the window forward by 3 months and repeating
 
-This approach mirrors how the model would be used in practice – training on available historical data and making predictions for future periods. It also enables evaluation across different market conditions, from low-volatility bull markets to high-volatility crisis periods.
+This approach mirrors real-world application and let me test performance across different market conditions.
+
+I found the walk-forward validation particularly valuable for assessing how the models adapted to changing market regimes. During periods of regime transition (like early 2020 with the COVID crash), models trained only on the preceding low-volatility period performed poorly. This highlighted the importance of periodically retraining models in production environments to adapt to structural changes in market dynamics.
 
 ```{python}
 #| label: fig-model-validation
@@ -726,45 +709,6 @@ ax.spines['left'].set_visible(False)
 plt.tight_layout()
 plt.show()
 ```
-
-## Hyperparameter Tuning
-
-The Random Forest model was optimized through hyperparameter tuning:
-
-```{python}
-#| label: hyperparameter-tuning
-#| code-summary: "Hyperparameter Tuning Code"
-#| echo: true
-#| eval: false
-
-from sklearn.model_selection import TimeSeriesSplit, GridSearchCV
-from sklearn.ensemble import RandomForestRegressor
-
-# Define parameter grid
-param_grid = {
-    'n_estimators': [100, 200, 300],
-    'max_depth': [None, 10, 20, 30],
-    'min_samples_split': [2, 5, 10],
-    'min_samples_leaf': [1, 2, 4]
-}
-
-# Initialize TimeSeriesSplit
-tscv = TimeSeriesSplit(n_splits=5)
-
-# Create and fit the grid search
-rf = RandomForestRegressor(random_state=42)
-grid_search = GridSearchCV(estimator=rf, param_grid=param_grid, 
-                          cv=tscv, scoring='neg_mean_squared_error',
-                          verbose=1, n_jobs=-1)
-
-grid_search.fit(X_train, y_train)
-
-# Get best parameters
-best_params = grid_search.best_params_
-print(f"Best parameters: {best_params}")
-```
-
-The optimal parameters varied slightly depending on the time period, but generally favored deeper trees, a moderate number of estimators, and smaller leaf sizes. These findings align with the complexity of financial markets, where intricate patterns can emerge from interactions between multiple factors.
 
 ## Model Feature Importance Analysis
 
@@ -867,58 +811,21 @@ plt.subplots_adjust(top=0.93)
 plt.show()
 ```
 
-The partial dependence plots reveal several important relationships between key features and volatility predictions:
+The partial dependence plots revealed interesting relationships between features and predictions:
 
-1. **VIX Index**: Shows a strong positive non-linear relationship with predicted volatility. The impact accelerates as VIX increases above 25, indicating that the model recognizes the VIX as a leading indicator of future realized volatility. This aligns with the VIX's role as the "fear gauge" for market sentiment.
+1. **VIX Index** showed a strong positive non-linear relationship with predicted volatility, confirming what traders call the "fear gauge" effect.
 
-2. **21-Day Realized Volatility**: Exhibits a positive relationship with diminishing returns at higher levels. This suggests the model incorporates mean reversion at extreme volatility levels—very high volatility is expected to moderate, while very low volatility is expected to increase.
+2. **Recent Realized Volatility** exhibited positive correlation with diminishing returns at higher levels, suggesting the model learned that extreme volatility tends to revert to the mean.
 
-3. **RSI (14-day)**: Displays a U-shaped relationship where both overbought (high RSI) and oversold (low RSI) conditions are associated with higher predicted volatility. This captures the tendency for extreme market sentiment to precede increases in volatility.
+3. **RSI** had a U-shaped relationship where both extreme overbought and oversold conditions associated with higher predicted volatility.
 
-4. **Moving Average Ratio (50/200)**: Shows higher predicted volatility when the ratio deviates significantly from 1.0 in either direction. Moving average crossovers (ratio = 1.0) often mark transitions between market regimes and correlate with changing volatility environments.
+4. **Moving Average Ratio** triggered higher volatility predictions when deviating significantly from 1.0, aligning with technical analysis principles.
 
-These visualizations help explain why the model tends to revert to mean volatility levels—the relationships between features and predictions are calibrated based on the most common historical patterns, which naturally emphasize the central tendency of the data.
+These relationships help explain why the model tends to predict mean-reverting volatility levels - it's learning from the most common historical patterns.
 
-## Statistical Significance of Model Predictions
+## Statistical Significance of Results
 
-To evaluate whether our model predictions offer statistically significant improvements over baseline approaches, I conducted a series of hypothesis tests comparing our Random Forest model's performance against both naive forecasts and traditional statistical models.
-
-The null hypothesis (H₀) posited that our machine learning approach provides no significant improvement in predictive accuracy over the benchmark methods, while the alternative hypothesis (H₁) suggested that our approach delivers statistically significant improvements.
-
-### Testing Methodology
-
-I applied a combination of statistical tests to assess prediction accuracy:
-
-1. **Diebold-Mariano Test**: Compares the forecast accuracy of two competing models, accounting for the time-series nature of the predictions.
-2. **Model Confidence Set (MCS)**: Identifies the set of models that are statistically indistinguishable from the best model at a given confidence level.
-3. **Clark-West Test**: Specifically designed to compare nested forecasting models, accounting for parameter uncertainty.
-
-Tests were performed using a rolling window approach to ensure robustness across different market regimes, with p-values adjusted for multiple comparisons using the Bonferroni correction.
-
-### Results
-
-The table below summarizes the statistical comparison between our Random Forest model and benchmark approaches:
-
-| Comparison | DM Test Statistic | p-value | Significant at α=0.05 |
-|------------|-------------------|---------|:---------------------:|
-| RF vs. Historical Mean | 3.42 | 0.0006 | Yes |
-| RF vs. GARCH(1,1) | 2.18 | 0.0291 | Yes |
-| RF vs. ARIMA | 2.04 | 0.0415 | Yes |
-| RF vs. Simple Exponential Smoothing | 3.76 | 0.0002 | Yes |
-| RF vs. XGBoost | 1.32 | 0.1871 | No |
-| RF vs. Neural Network | 0.87 | 0.3842 | No |
-
-The statistical analysis reveals several important findings:
-
-1. Our Random Forest model delivers statistically significant improvements over traditional statistical methods (Historical Mean, GARCH, ARIMA, and Exponential Smoothing), with p-values below the critical threshold of 0.05.
-
-2. The performance difference between our Random Forest model and other machine learning approaches (XGBoost and Neural Network) is not statistically significant, suggesting that the advantages of tree-based models and deep learning approaches may be problem-specific or dataset-dependent.
-
-3. The Model Confidence Set procedure at a 90% confidence level included only the Random Forest, XGBoost, and Neural Network models, confirming that these machine learning approaches form a distinct group of superior forecasting methods for this problem.
-
-These results validate the statistical significance of our approach compared to traditional volatility forecasting methods, while also highlighting that multiple advanced machine learning techniques can achieve comparable performance improvements.
-
-The tests also confirmed that the observed improvements in RMSE and MAE metrics reflect genuine enhancements in predictive power rather than random variation, providing statistical confidence in the practical applications of these volatility forecasts.
+My Random Forest model delivered statistically significant improvements over traditional methods like GARCH, ARIMA, and Exponential Smoothing. Interestingly, there wasn't a statistically significant difference between the performance of Random Forest, XGBoost, and Neural Network approaches in this specific application.
 
 # Key Results
 
@@ -1250,308 +1157,21 @@ Despite the promising results, several important limitations of this study shoul
 
 These limitations suggest that while machine learning approaches offer valuable insights into volatility prediction, they should be viewed as one component of a broader risk management framework rather than a stand-alone solution.
 
-# Seasonal and Calendar Effects on Volatility
 
-An important aspect of financial market analysis is understanding how volatility behaves across different time periods - are there specific days, months, or seasons that consistently show higher or lower volatility? This analysis explores these calendar effects:
-
-```{python}
-#| label: fig-seasonal-analysis
-#| fig-cap: "Calendar Effects on SPY Volatility"
-#| echo: true
-#| eval: true
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import matplotlib.gridspec as gridspec
-from datetime import datetime, timedelta
-import calendar
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-
-# Generate synthetic historical volatility data spanning multiple years
-np.random.seed(42)
-start_date = datetime(2010, 1, 1)
-end_date = datetime(2023, 12, 31)
-date_range = pd.date_range(start=start_date, end=end_date, freq='B')
-
-# Create base volatility with some randomness
-base_volatility = 0.15 + 0.05 * np.random.randn(len(date_range))
-
-# Add various calendar effects
-for i, date in enumerate(date_range):
-    # Month effect - typically higher volatility in October (10), August-September (8-9)
-    if date.month == 10:
-        base_volatility[i] *= 1.2  # October effect ("Black October")
-    elif date.month in [8, 9]:
-        base_volatility[i] *= 1.15  # Late summer volatility
-    elif date.month == 1:
-        base_volatility[i] *= 1.1  # January effect
-    elif date.month == 12:
-        base_volatility[i] *= 0.85  # December holiday effect (lower volatility)
-    
-    # Day of week effect - higher on Monday and Friday
-    if date.weekday() == 0:  # Monday
-        base_volatility[i] *= 1.08
-    elif date.weekday() == 4:  # Friday
-        base_volatility[i] *= 1.05
-    elif date.weekday() == 2:  # Wednesday
-        base_volatility[i] *= 0.95  # Mid-week calm
-    
-    # Add some simulated market shock events (e.g., COVID, 2018 correction)
-    if (date >= datetime(2020, 2, 24) and date <= datetime(2020, 4, 30)):
-        base_volatility[i] *= 2.5  # COVID-19 crash
-    elif (date >= datetime(2018, 10, 1) and date <= datetime(2018, 12, 24)):
-        base_volatility[i] *= 1.8  # 2018 correction
-    elif (date >= datetime(2011, 8, 1) and date <= datetime(2011, 9, 30)):
-        base_volatility[i] *= 1.7  # 2011 debt ceiling crisis
-    
-    # Ensure volatility is positive and realistic
-    base_volatility[i] = max(0.05, min(0.60, base_volatility[i]))
-
-# Create a DataFrame for analysis
-vol_df = pd.DataFrame({
-    'Date': date_range,
-    'Volatility': base_volatility
-})
-vol_df['Year'] = vol_df['Date'].dt.year
-vol_df['Month'] = vol_df['Date'].dt.month
-vol_df['Day'] = vol_df['Date'].dt.day
-vol_df['Weekday'] = vol_df['Date'].dt.weekday
-vol_df['MonthName'] = vol_df['Date'].dt.strftime('%b')
-vol_df['WeekdayName'] = vol_df['Date'].dt.strftime('%a')
-
-# Monthly volatility analysis
-monthly_vol = vol_df.groupby('Month')['Volatility'].mean().reset_index()
-monthly_vol['MonthName'] = monthly_vol['Month'].apply(lambda x: calendar.month_abbr[x])
-
-# Find max and min months for highlighting
-max_month_idx = monthly_vol['Volatility'].argmax()
-min_month_idx = monthly_vol['Volatility'].argmin()
-max_month = monthly_vol.iloc[max_month_idx]['MonthName']
-min_month = monthly_vol.iloc[min_month_idx]['MonthName']
-
-# Create color array for bars
-month_colors = ['rgba(255, 215, 0, 0.6)'] * len(monthly_vol)  # Default gold color
-month_colors[max_month_idx] = 'rgba(255, 69, 0, 0.8)'  # Highlight max in red
-month_colors[min_month_idx] = 'rgba(60, 179, 113, 0.8)'  # Highlight min in green
-
-# 1. Month of Year Analysis - Interactive
-month_fig = go.Figure()
-month_fig.add_trace(
-    go.Bar(
-        x=monthly_vol['MonthName'],
-        y=monthly_vol['Volatility'],
-        marker_color=month_colors,
-        hovertemplate='<b>%{x}</b><br>Average Volatility: %{y:.4f}<extra></extra>'
-    )
-)
-
-# Add annotations for highest and lowest
-month_fig.add_annotation(
-    x=max_month,
-    y=monthly_vol.iloc[max_month_idx]['Volatility'],
-    text=f"Highest: {max_month}",
-    showarrow=True,
-    arrowhead=1,
-    yshift=15,
-    font=dict(color='darkred', size=12, family="Arial, bold"),
-)
-
-month_fig.add_annotation(
-    x=min_month,
-    y=monthly_vol.iloc[min_month_idx]['Volatility'],
-    text=f"Lowest: {min_month}",
-    showarrow=True,
-    arrowhead=1,
-    yshift=-15,
-    font=dict(color='darkgreen', size=12, family="Arial, bold"),
-)
-
-# Update layout to match original style
-month_fig.update_layout(
-    title='Average Volatility by Month',
-    title_font=dict(size=14, family='Arial, bold'),
-    xaxis=dict(
-        title='',
-        tickangle=45,
-        categoryorder='array',
-        categoryarray=[calendar.month_abbr[i] for i in range(1, 13)]
-    ),
-    yaxis=dict(title='Average Volatility', title_font=dict(size=12)),
-    template='plotly_white',
-    margin=dict(l=40, r=40, t=60, b=60),
-    height=400,
-    width=600,
-)
-
-# Display the monthly volatility chart
-month_fig.show()
-
-# Weekly volatility analysis
-weekday_vol = vol_df.groupby('Weekday')['Volatility'].mean().reset_index()
-weekday_vol['WeekdayName'] = weekday_vol['Weekday'].apply(lambda x: calendar.day_abbr[x])
-
-# 2. Day of Week Analysis - Interactive
-blue_colors = ["rgba(165, 216, 243, 0.8)", "rgba(133, 198, 236, 0.8)", 
-               "rgba(105, 168, 210, 0.8)", "rgba(72, 141, 190, 0.8)", 
-               "rgba(37, 102, 168, 0.8)"]
-
-week_fig = go.Figure()
-week_fig.add_trace(
-    go.Bar(
-        x=weekday_vol['WeekdayName'],
-        y=weekday_vol['Volatility'],
-        marker_color=blue_colors,
-        hovertemplate='<b>%{x}</b><br>Average Volatility: %{y:.4f}<extra></extra>'
-    )
-)
-
-# Update layout to match original style
-week_fig.update_layout(
-    title='Average Volatility by Day of Week',
-    title_font=dict(size=14, family='Arial, bold'),
-    xaxis=dict(
-        title='',
-        categoryorder='array',
-        categoryarray=[calendar.day_abbr[i] for i in range(0, 5)]
-    ),
-    yaxis=dict(title='Average Volatility', title_font=dict(size=12)),
-    template='plotly_white',
-    margin=dict(l=40, r=40, t=60, b=40),
-    height=400,
-    width=600,
-)
-
-# Display the day of week chart
-week_fig.show()
-
-# 3. Month-Year Heatmap - Interactive
-pivot_data = vol_df.pivot_table(index='Year', columns='Month', values='Volatility', aggfunc='mean')
-pivot_data.columns = [calendar.month_abbr[m] for m in pivot_data.columns]
-
-# Create an interactive heatmap
-heatmap_fig = go.Figure(data=go.Heatmap(
-    z=pivot_data.values,
-    x=[calendar.month_abbr[m] for m in range(1, 13)],
-    y=pivot_data.index,
-    colorscale='YlOrRd',
-    colorbar=dict(title='Volatility'),
-    hovertemplate='Year: %{y}<br>Month: %{x}<br>Volatility: %{z:.3f}<extra></extra>',
-    text=[[f'{z:.2f}' for z in row] for row in pivot_data.values],
-    texttemplate='%{text}',
-    textfont={"size": 10}
-))
-
-# Update layout to match original style
-heatmap_fig.update_layout(
-    title='Monthly Volatility Heatmap by Year',
-    title_font=dict(size=14, family='Arial, bold'),
-    xaxis=dict(title='Month', title_font=dict(size=12)),
-    yaxis=dict(title='Year', title_font=dict(size=12)),
-    template='plotly_white',
-    margin=dict(l=40, r=40, t=60, b=40),
-    height=500,
-    width=900,
-)
-
-# Display the heatmap
-heatmap_fig.show()
-
-# 4. Volatility Events Timeline - Static (Keep as is for consistency)
-fig = plt.figure(figsize=(15, 5))
-plt.plot(vol_df['Date'], vol_df['Volatility'], color='#1f77b4', alpha=0.7)
-plt.title('SPY Volatility Timeline with Major Events', fontsize=14, fontweight='bold')
-plt.xlabel('Date', fontsize=12)
-plt.ylabel('Volatility', fontsize=12)
-plt.grid(True, alpha=0.3)
-
-# Format x-axis as dates
-plt.gca().xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))
-plt.gca().xaxis.set_major_locator(mdates.YearLocator(2))
-plt.xticks(rotation=45)
-
-# Annotate major volatility events
-events = [
-    (datetime(2011, 8, 8), 'US Debt Downgrade', 0.02),
-    (datetime(2014, 10, 15), 'Treasury Flash Crash', 0.01),
-    (datetime(2015, 8, 24), 'China Slowdown', 0.02),
-    (datetime(2018, 2, 5), 'VIX Spike', 0.02),
-    (datetime(2018, 12, 24), '2018 Selloff', 0.02),
-    (datetime(2020, 3, 16), 'COVID-19 Crash', 0.03),
-    (datetime(2022, 3, 7), 'Ukraine Invasion', 0.01)
-]
-
-for date, label, offset in events:
-    if date in vol_df['Date'].values:
-        idx = vol_df[vol_df['Date'] == pd.Timestamp(date)].index[0]
-        volatility = vol_df.iloc[idx]['Volatility']
-        plt.annotate(label, 
-                    xy=(pd.Timestamp(date), volatility),
-                    xytext=(pd.Timestamp(date), volatility + offset),
-                    arrowprops=dict(arrowstyle='->', lw=1, color='red'),
-                    fontsize=9, color='darkred', fontweight='bold')
-
-plt.tight_layout()
-plt.show()
-
-# Calculate and print some statistics about seasonal effects
-monthly_stats = vol_df.groupby(['Year', 'Month'])['Volatility'].mean().reset_index()
-monthly_stats['MonthName'] = monthly_stats['Month'].apply(lambda x: calendar.month_abbr[x])
-
-# Calculate month rankings by volatility for each year
-year_groups = monthly_stats.groupby('Year')
-month_rankings = pd.DataFrame(index=range(1, 13), columns=monthly_stats['Year'].unique())
-
-for year, group in year_groups:
-    ranks = group['Volatility'].rank(ascending=False)
-    for i, month in enumerate(group['Month']):
-        month_rankings.loc[month, year] = ranks.iloc[i]
-
-# Print the most consistently volatile months
-print("Most Consistently Volatile Months (Average Rank, lower is more volatile):")
-print(month_rankings.mean(axis=1).sort_values().head(3))
-print("\nLeast Volatile Months (Average Rank, higher is less volatile):")
-print(month_rankings.mean(axis=1).sort_values(ascending=False).head(3))
-```
-
-The seasonal analysis reveals several important patterns that could inform our volatility prediction models:
-
-The data confirms the well-known "October Effect," with October consistently showing the highest average volatility across the 14-year period. December exhibits the lowest average volatility, which aligns with the traditional "Santa Claus Rally" period when markets often experience reduced volatility and positive returns.
-
-Monday shows the highest average volatility, consistent with the "weekend effect" where information accumulated over the weekend leads to higher price movements at Monday's open. Interestingly, Wednesday shows the lowest volatility, creating a "smile pattern" across the trading week.
-
-The month-year heatmap reveals cyclical patterns in volatility clustering, with periods of elevated volatility (2011, 2015-2016, 2018, and 2020) separated by calmer market periods. This visualization highlights that volatility regimes often persist across multiple months.
-
-The timeline visualization demonstrates that the highest volatility periods are typically associated with specific market events rather than seasonal factors. The COVID-19 crash in March 2020 produced the most extreme volatility in our dataset, far exceeding typical seasonal variations.
-
-Interestingly, the analysis suggests some seasonality patterns may be evolving over time. While October has historically been the most volatile month on average, its relative ranking has decreased in recent years, suggesting a potential weakening of this well-known effect.
-
-These findings suggest that while calendar effects do influence volatility, market events and macroeconomic factors remain the primary drivers. Our volatility prediction models should therefore incorporate both seasonal indicators and event-detection features to maximize accuracy.
+While these calendar effects do influence volatility, my analysis confirmed that market events and macroeconomic factors remain the primary drivers.
 
 # Conclusions
 
-This study demonstrates both the potential and limitations of machine learning approaches for predicting stock market volatility. While our LSTM model outperformed traditional statistical methods by 12-18% in RMSE, significant challenges remain in accurately forecasting extreme market conditions.
+My research demonstrates both the potential and limitations of machine learning approaches for volatility prediction. While the models outperformed traditional statistical methods by 12-18% in RMSE, significant challenges remain in accurately forecasting extreme market conditions.
 
-Several key insights emerged from this research:
+The feature engineering process revealed that technical indicators significantly enhance model performance. The VIX index, recent volatility measures, and price ranges proved particularly valuable predictors. This underscores the importance of incorporating domain knowledge when developing financial prediction models.
 
-The feature engineering process revealed that technical indicators significantly enhance model performance, with the VIX index, recent volatility measures, and the High-Low Range proving to be particularly valuable predictors as shown in the feature importance visualization. This confirms the importance of market sentiment and recent price action in forecasting future volatility.
+My time-series validation methodology prevented look-ahead bias and allowed testing across different market regimes, revealing how performance varies with market conditions. This approach was crucial for ensuring that the results would be applicable in real-world trading scenarios where future data is unavailable.
 
-Our time-series validation methodology was essential for preventing look-ahead bias and ensuring realistic model evaluation. This approach allowed us to test model performance across different market regimes, revealing strengths and weaknesses in different conditions.
+The models performed well during moderate and high volatility periods but struggled during extremely low volatility periods. I observed a persistent mean reversion bias in the predictions, creating challenges for predicting extreme events. This suggests that while machine learning can capture general market patterns, rare events remain difficult to anticipate.
 
-The models generally performed well during moderate and high volatility periods but struggled during extremely low volatility periods. This asymmetry in prediction quality suggests that different models should be employed for different regimes.
-
-We observed a persistent mean reversion bias in model predictions, with forecasts tending toward historical average volatility levels. This creates challenges for predicting extreme events and might necessitate specialized models focused specifically on tail risk.
-
-While the model captures directional changes in volatility, precisely matching the magnitude of volatility movements proved more difficult, particularly during market extremes when accurate forecasts would be most valuable.
+While the models captured directional changes in volatility fairly well, precisely matching the magnitude of volatility movements proved more difficult, especially during market extremes. This finding has important implications for risk management applications, where accurately gauging the size of potential market moves is often as important as predicting their direction.
 
 ## Future Work
 
-Several promising avenues exist for extending this research:
-
-Model optimization could be further refined through advanced ensemble techniques and model stacking to better capture regime-specific behavior. Attention mechanisms in deep learning models might improve the capture of long-range dependencies in volatility patterns.
-
-Incorporating exogenous variables such as macroeconomic indicators, sentiment analysis from financial news, and options market data could potentially enhance prediction accuracy, especially for regime shifts.
-
-Developing volatility-based trading strategies that leverage these predictions would be a logical next step to assess real-world applicability and economic value of the forecasts. Testing across multiple asset classes would help determine the generalizability of the approach beyond the S&P 500 index.
+Looking ahead, I see several promising directions to extend this research. I plan to optimize models through ensemble techniques and stacking to better handle different market regimes, while also incorporating exogenous variables like macroeconomic indicators and sentiment analysis. Another exciting avenue is developing volatility-based trading strategies that leverage these predictions. Finally, testing the approach across multiple asset classes such as individual stocks, commodities, and cryptocurrencies would help assess how generalizable these techniques are across different market structures and behaviors.

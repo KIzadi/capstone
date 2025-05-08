@@ -35,15 +35,10 @@ This project explores machine learning approaches to predict stock market volati
 
 ### Environment Setup
 ```bash
-# Clone the repository
 git clone https://github.com/KIzadi/capstone.git
 cd capstone
-
-
 conda env create -f environment.yml
 conda activate capstone
-
-
 pip install yfinance tensorflow xgboost
 ```
 
